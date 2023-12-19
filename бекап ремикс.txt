@@ -1,0 +1,248 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Token { // версия компилятора
+    string public name; // строка имени
+    string public symbol; // строка фамилии
+    uint256 public totalSupply; // общее предложение число
+    mapping(address => uint256) public balanceOf; // соотносим баланс для конструктора
+    mapping(address => mapping(address => uint256)) public allowance; // 
+    event Transfer(address indexed from, address indexed to, uint256 value);//
+
+
+    constructor(string memory _name, string memory _symbol, uint256 _totalSupply) {// конструктор, где вводится строка, имя, символ, общее предложение
+        name = _name;//имя
+        symbol = _symbol;//символ
+        totalSupply = _totalSupply;//общее предложение
+        balanceOf[msg.sender] = _totalSupply;//баланс
+    }
+
+    function transfer(address _to, uint256 _value) external {//операция перевод
+        require(balanceOf[msg.sender] >= _value, "Insufficient balance");//ошибка нулевой баланс
+        require(_to != address(0), "Invalid address");//ошибка не верный адресс
+
+        balanceOf[msg.sender] -= _value;//отсылаемся на баланс
+        balanceOf[_to] += _value;// Добавление и назначение
+
+        emit Transfer(msg.sender, _to, _value);//пуск операции
+    }
+    function transferFrom(address _from, address _to, uint256 _value) external {//операция перевод 
+    require(balanceOf[_from] >= _value, "Insufficient balance");//ошибка нулевой баланс
+    require(allowance[_from][msg.sender] >= _value, "Not enough allowance");//ошибка недостаточно пособия
+
+    balanceOf[_from] -= _value;//вычитание и присвоение
+    balanceOf[_to] += _value;//Добавление и назначение
+    allowance[_from][msg.sender] -= _value;//вычитание и присвоение
+
+    emit Transfer(_from, _to, _value);//запуск 
+}
+}
+contract GlobalInvest {// контракт название контрата
+    Token public publicToken;//вводим токены публичные
+    Token public privateToken;//вводим токены приватные
+    mapping(address => bool) public isInvestor;//обьявляем адрес для конструктора инвестор
+    mapping(address => bool) public isPrivateInvestor;//обьявляем адрес для конструктора приватный инвестор
+    mapping(address => uint256) public privateInvestments;//обьявляем адрес для конструктора приватные инвестиции
+    mapping(address => bool) public isPartner;//обьявляем адрес для конструктора партнер
+    address public owner;// адресс хозяина
+    mapping(address => PrivateRequest) privateRequests;// приватные запросы
+    mapping(address => PublicRequest) publicRequests;//публичные запросы
+     mapping(address => User) public users;//отображение пользователя
+    address[] public userlist; //адрес пользовательского листа
+ mapping (uint => obmen) public obmeni; // отображение обмена
+    uint public obmen_amount;// единица обмена
+   struct User {// строка пользователь
+
+        uint invest_privat; //токены приватные
+        uint invest_pub; // токены публичные
+        bytes32 pwhash; //пароль
+        uint role; // 1-инвестор, 2-овнер, 3-privat Провайдер, 4-pub Провайдер
+   }
+       struct obmen { //структрута обмена
+        address adr_from; //адрес отправителя
+        address adr_to; //адресс получателя
+        uint value_pub; //цена публичных паблик токенов
+        uint value_privat; //цена приватных паблик токенов
+        bool finished; //завершение
+       }
+    struct PrivateRequest {// строка частный запрос
+        string name;// ввод имя
+        string email;//почта
+        address ethereumAddress;// адресс блокчейн
+        bool approved;// одобрено
+        bool exists;// существующий
+    }
+
+    struct PublicRequest {//строка публичный запрос
+        string name;// ввод имя
+        string email;//почта
+        address ethereumAddress;//адресс блокчейн
+        bool approved;// одобрено
+        bool exists;//существующий
+    }
+//ввод публичных чисел
+    uint256 public privateTokenPrice;//приватные токены цена
+    uint256 public publicTokenPrice;//публичные токены цена
+    uint256 public maxPrivateTokenAmount;//максимальная сумма частного токена
+    uint256 public maxPublicTokenAmount;//максимальная сумма публичного токена
+
+    constructor() {
+        users[0x5B38Da6a701c568545dCfcB03FcB875f56beddC4] = User(1000, 100000, 0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab0107, 1); //инвесторы       
+        users[0x617F2E2fD72FD9D5503197092aC168c91465E7f2] = User(100000,100000,0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab0107,3); //privat Провайдер
+        users[0x17F6AD8Ef982297579C203069C1DbfFE4348c372] = User(100000,100000,0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab0107, 4); //pub Провайдер
+        users[0x03C6FcED478cBbC9a4FAB34eF9f40767739D1Ff7] = User(10000000,10000000,0x64e604787cbf194841e7b68d7cd28786f6c9a0a3ab9f8b0a0e87cb4387ab0107,2); //владелец
+        userlist.push(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4); //инвесторы
+        userlist.push(0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2); 
+        userlist.push(0x617F2E2fD72FD9D5503197092aC168c91465E7f2); //privat Провайдер
+        userlist.push(0x17F6AD8Ef982297579C203069C1DbfFE4348c372); //pub Провайдер
+        userlist.push(0x03C6FcED478cBbC9a4FAB34eF9f40767739D1Ff7); //владелец
+        publicToken = new Token("GI-Public", "GIP", 0);//создание запроса токена
+        privateToken = new Token("-Private", "GIPr", 0);//создание запроса токена
+        owner = msg.sender;//хозяин
+        privateTokenPrice = 200;// цена
+        publicTokenPrice = 150;//цена
+        maxPrivateTokenAmount = 300000;//максимальная сумма покупки
+        maxPublicTokenAmount = 330000;//максимальная сумма покупки
+    }
+    function create_investor (bytes32 pwhash ) public { //функция регестрации инвестора
+        require(users[msg.sender].pwhash == 0,"error: polizivateli ecti`"); // ошибка пользователь уже зарегестрирован
+        users[msg.sender] = User(0,0,pwhash,1);//отсылка на пользователя
+        userlist.push(msg.sender);//отсылка на пользователя
+    }
+    function invest(uint256 _amount, bool _isPrivate) external {//функция инвестирование
+        require(_amount > 0, "Invalid amount");//
+
+        if (_isPrivate) {//
+            require(//
+                privateInvestments[msg.sender] + _amount <= maxPrivateTokenAmount,//
+                "The Number of tokens exceeds the allowed amount"//
+            );
+            uint256 cost = _amount * privateTokenPrice;//
+            require(publicToken.balanceOf(msg.sender) >= cost, "Insufficient balance");//
+
+            publicToken.transferFrom(msg.sender, address(this), cost);//
+            privateInvestments[msg.sender] += _amount;//
+            privateToken.transfer(msg.sender, _amount);//
+        } else {//
+            require(//
+                _amount <= maxPublicTokenAmount,//
+                "The Number of tokens exceeds the allowed amount"//
+            );//
+
+            uint256 cost = _amount * publicTokenPrice;
+            require(publicToken.balanceOf(msg.sender) >= cost, "Insufficient balance");
+
+            publicToken.transferFrom(msg.sender, address(this), cost);
+            publicToken.transfer(msg.sender, _amount);
+        }
+
+        isInvestor[msg.sender] = true;
+    }
+ mapping (address => bool) Bloked; //блокировка
+    address[] public Bloked_amount;
+    function Blok (address investor) public { //функция блокеровки
+        require(users[msg.sender].role == 2,"ne owner");
+        Bloked[investor] = true;
+        Bloked_amount.push(investor);
+    } 
+    function isBloked2 () public view returns(address[] memory investor){ //функция просмотра блокировки
+        return  Bloked_amount;
+    }
+    function isBloked () public view returns(address[] memory investor){//функция просмотра блокировки
+         return  Bloked_amount;
+    }
+    function exchangeTokens(uint256 _amount, bool _isPrivate) external {
+        require(isInvestor[msg.sender], "Not an investor");
+
+        if (_isPrivate) {
+            privateToken.transfer(msg.sender, _amount);
+        } else {
+            publicToken.transfer(msg.sender, _amount);
+        }
+    }
+
+    // Private provider functions
+    function requestPrivateTokens(string memory _name, string memory _email, address _ethereumAddress) external {
+        require(!privateRequests[msg.sender].exists, "Request already submitted");
+
+        PrivateRequest memory request;
+
+request.name = _name;
+        request.email = _email;
+        request.ethereumAddress = _ethereumAddress;
+        request.approved = false;
+        request.exists = true;
+
+        privateRequests[msg.sender] = request;
+    }
+
+    function approvePrivateRequest(address _investor) external {
+        require(msg.sender == owner, "Only Owner can approve requests");
+        require(privateRequests[_investor].exists, "Request does not exist");
+
+        privateRequests[_investor].approved = true;
+        isPrivateInvestor[_investor] = true;
+    }
+
+    function rejectPrivateRequest(address _investor) external {
+        require(msg.sender == owner, "Only Owner can reject requests");
+        require(privateRequests[_investor].exists, "Request does not exist");
+
+        privateRequests[_investor].exists = false;
+        delete privateRequests[_investor];
+    }
+
+    function changePrivateTokenPrice(uint256 _newPrice) external {
+        require(msg.sender == owner, "Only Owner can change token price");
+        privateTokenPrice = _newPrice;
+    }
+
+    // Public provider functions
+    function requestPublicTokens(string memory _name, string memory _email, address _ethereumAddress) external {
+        require(!publicRequests[msg.sender].exists, "Request already submitted");
+
+        PublicRequest memory request;
+        request.name = _name;
+        request.email = _email;
+        request.ethereumAddress = _ethereumAddress;
+        request.approved = false;
+        request.exists = true;
+
+        publicRequests[msg.sender] = request;
+    }
+
+    function approvePublicRequest(address _investor) external {
+        require(msg.sender == owner, "Only Owner can approve requests");
+        require(publicRequests[_investor].exists, "Request does not exist");
+
+        publicRequests[_investor].approved = true;
+        isInvestor[_investor] = true;
+    }
+
+    
+    function rejectPublicRequest(address _investor) external {
+        require(msg.sender == owner, "Only Owner can reject requests");
+        require(publicRequests[_investor].exists, "Request does not exist");
+
+        publicRequests[_investor].exists = false;
+        delete publicRequests[_investor];
+    }
+
+    function changePublicTokenPrice(uint256 _newPrice) external {
+        require(msg.sender == owner, "Only Owner can change token price");
+        publicTokenPrice = _newPrice;
+    }
+
+    function rewardPartner(address _partner, uint256 _amount) external {
+        require(isPartner[msg.sender], "Not a partner");
+        require(_amount > 0, "Invalid amount");
+
+        publicToken.transfer(_partner, _amount);
+    }
+        function obmen_token (address adr_to,uint value_pub,uint value_privat) public view { 
+        require(msg.sender != adr_to,"obmen dlya cebya");
+        require(value_privat > 0,"ne vernaya cymma");
+        require(value_pub > 0 ,"ne vernaya cymma");
+        obmeni[obmen_amount];
+    }
+}
